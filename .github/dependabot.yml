@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Backend Python — requirements.txt agora travado em versão exata
+  # (revisão de segurança); é o Dependabot que avisa quando uma versão
+  # travada tiver correção de segurança, em vez de descobrir por acidente.
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "npm"
+    directory: "/web"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  # Imagem base dos Dockerfiles também é dependência — vale monitorar.
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"

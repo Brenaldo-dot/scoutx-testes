@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+.env.local
+.env.*.local
+web/public-minerador/
+.DS_Store
+*.log
+audit-output.json

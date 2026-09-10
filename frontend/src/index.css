@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tema claro/escuro — o app inteiro usava cor fixa em hex direto nas
+   classes (bg-[#1c1f2e] etc.), não a paleta semântica do Tailwind, então
+   um toggle de tema precisa de variável CSS por trás de cada uma dessas
+   cores em vez do dark: do Tailwind (que não ajudaria aqui, já que nada
+   usava a escala gray-900 como base). Escuro é o padrão (era o único modo
+   até agora); [data-theme="light"] sobrescreve. */
+:root {
+  --bg-page: #0f1117;
+  --bg-surface: #1c1f2e;
+  --bg-surface-2: #161824;
+  --border: #2d3148;
+  --border-soft: #22263a;
+  --hover-surface: #222538;
+  --hover-secondary: #374151;
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-tertiary: #9ca3af;
+  --text-muted: #6b7280;
+  --text-faint: #4b5563;
+}
+
+[data-theme='light'] {
+  --bg-page: #f5f6f8;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f1f2f5;
+  --border: #e2e4ea;
+  --border-soft: #eceef2;
+  --hover-surface: #eef0f4;
+  --hover-secondary: #e2e4ea;
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-tertiary: #4b5563;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+}
+
+/* Botão de ação principal — pílula (rounded-full) com gradiente azul vívido
+   e brilho, no estilo da referência que o usuário mandou (comunidade estilo
+   "hub" com cards/pills brilhantes), mas em azul em vez de roxo. A primeira
+   tentativa (cinza metálico) foi na direção errada — o pedido não era MENOS
+   gradiente, era mais polimento/brilho/arredondamento no mesmo azul. */
+@layer components {
+  .btn-primary {
+    @apply relative rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-all disabled:cursor-not-allowed disabled:opacity-50;
+    background: linear-gradient(90deg, #1d4ed8 0%, #3b82f6 55%, #7dd3fc 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.3),
+      0 4px 22px rgba(59, 130, 246, 0.45);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(90deg, #2563eb 0%, #60a5fa 55%, #bae6fd 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 6px 28px rgba(59, 130, 246, 0.6);
+  }
+  [data-theme='light'] .btn-primary {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 4px 18px rgba(37, 99, 235, 0.35);
+  }
+
+  /* Item ativo do menu — referência do usuário (sidebar "Fourfy"): não é
+     mais pílula sólida, é um retângulo com cantos arredondados, fundo azul
+     translúcido e borda fina brilhante — mais discreto que o botão
+     principal, mas ainda inconfundivelmente azul. */
+  .nav-active {
+    background: linear-gradient(90deg, rgba(29, 78, 216, 0.22), rgba(59, 130, 246, 0.12));
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px rgba(59, 130, 246, 0.08);
+    color: #7dd3fc;
+  }
+  [data-theme='light'] .nav-active {
+    background: linear-gradient(90deg, rgba(29, 78, 216, 0.12), rgba(59, 130, 246, 0.06));
+    color: #1d4ed8;
+  }
+
+  /* "LED" azul por trás de cada ícone de menu — no item ativo, acende:
+     fundo mais forte + halo, como uma luz ligada. */
+  .nav-icon-active {
+    background: radial-gradient(circle at 30% 30%, #60a5fa, #1d4ed8 75%);
+    color: #f0f9ff;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  }
+
+  /* Linha fina azul separando a sidebar do conteúdo — troca a borda cinza
+     genérica por um traço luminoso, pedido explícito do usuário. */
+  .sidebar-edge {
+    border-right: 1px solid rgba(59, 130, 246, 0.4);
+    box-shadow: 6px 0 24px -12px rgba(59, 130, 246, 0.45);
+  }
+}
