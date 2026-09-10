@@ -6,6 +6,92 @@ até quarta-feira e pode continuar com outra sessão/instância nesse meio
 tempo. Este documento existe pra essa próxima sessão se situar rápido, sem
 precisar re-descobrir tudo do zero.
 
+## ⚠️ Este repositório é `scoutx-testes`, NÃO é o `APP_SCOUTX` real
+
+Atualização de 2026-09-10/11: este é um repositório **separado e novo**,
+criado só pra levar um protótipo de duas features (Indicação e Comunidade,
+ver seção abaixo) de um computador pra outro, sem misturar com o
+`APP_SCOUTX` de produção. É um snapshot único (histórico git começou do
+zero aqui), tirado de uma cópia local que estava rodando só em servidor de
+teste (Postgres em memória via `pg-mem`), **nunca implantado em produção de
+verdade**. Quando essas duas features forem aprovadas, o código daqui
+precisa ser portado pro `APP_SCOUTX` de verdade (github.com/Brenaldo-dot/APP_SCOUTX)
+— não faça deploy direto a partir deste repositório assumindo que ele já
+tem tudo que está em produção hoje, ele pode estar desatualizado em relação
+a outras mudanças que rodaram só lá.
+
+## Features novas neste repositório (Indicação + Comunidade)
+
+Duas features grandes, construídas e testadas localmente nesta sessão, código
+completo já incluído neste repositório:
+
+### Indicação (cliente indica cliente)
+Cliente pede um cupom de 10% de desconto pela aba "Indicação" (preenche
+WhatsApp + PIX, os dois obrigatórios). Pedido cai numa fila em
+Admin → Indicações; o admin cria o cupom de verdade no painel da Cakto (não
+tem API pra isso) e cola o código pra ativar — aí o cliente vê o cupom
+liberado sozinho. Quando alguém assina usando esse cupom (webhook Cakto traz
+`data.couponCode` direto, sem precisar de chamada extra), quem indicou ganha
+**50% do valor do plano, só na primeira compra do indicado** (não é
+recorrente). Reembolso/cancelamento remove a comissão pendente sozinho.
+Arquivos principais: `web/db.js` (tabelas `referral_coupons`/
+`referral_commissions`), `web/cakto.js` (`recordReferralCommissionIfAny`),
+rotas `/api/referral/*` e `/api/admin/referrals*` em `web/server.js`,
+telas `frontend/src/pages/Indicacao.jsx` (cliente) e
+`AdminIndicacoes.jsx` (admin).
+
+### Comunidade (embaixadores)
+Extensão do programa de afiliados já existente: um afiliado cadastrado
+(`affiliates.cakto_email`) pode virar "embaixador" e criar sua própria
+comunidade fechada (nome, descrição, foto, editável a qualquer hora),
+com **canais** (sidebar agrupada por categoria, tipo fórum de verdade),
+posts com imagem, curtidas, comentários, post fixado, editar/apagar post.
+Cliente entra automático numa comunidade se assinar pelo link de afiliado
+do embaixador, ou manualmente pelo diretório se ainda não estiver em
+nenhuma — uma vez dentro, não dá pra trocar de comunidade (nem cancelando e
+reativando a assinatura depois).
+
+Comissão: 3 níveis dinâmicos por quantidade de membros ATIVOS (organização
+não vencida) — **Gold** até 15 membros = 25%, **Platinum** até 25 = 30%,
+**Diamond** acima disso = 35% (recalculado a cada renovação, pode subir OU
+descer). Empilha com a comissão de afiliado que já existia (não substitui).
+Calculado direto no webhook, a cada renovação de QUALQUER membro ativo
+(`recordCommunityCommissionIfAny` em `web/cakto.js`) — sem cron/job
+agendado nenhum.
+Arquivos principais: `web/communityTiers.js` (as 3 faixas), tabelas
+`communities`/`community_members`/`community_channels`/`community_posts`/
+`community_comments`/`community_post_likes`/`community_commissions` em
+`web/db.js`, rotas `/api/community/*` e `/api/admin/communities*` em
+`web/server.js`, tela única adaptativa `frontend/src/pages/Comunidade.jsx`
+(muda de visual conforme a pessoa é embaixador sem comunidade / embaixador
+com comunidade / membro / visitante) e `AdminComunidades.jsx`.
+
+### Como testar localmente sem Docker/Postgres
+`web/dev-local-bootstrap.js` sobe o `server.js`/`db.js` REAIS contra um
+Postgres em memória (`pg-mem`), interceptando só o `require("pg")`. Rode:
+```bash
+cd frontend && npm install && npm run build
+cd .. && rm -rf web/public-minerador && cp -r frontend/dist web/public-minerador
+cd web && npm install
+npm install --no-save pg-mem
+node dev-local-bootstrap.js
+```
+Abre `http://localhost:3001`, primeira vez cai em `/setup` (cria conta
+admin do zero, nada persiste entre reinícios — é só memória). Pra virar
+embaixador de teste: cria um afiliado em `/api/admin/affiliates` com o
+MESMO email da sua conta logada (a detecção de "sou embaixador" compara
+`req.appUser.email` com `affiliates.cakto_email`).
+
+**Duas pegadinhas do `pg-mem`** (não são bugs reais, só limitação do
+simulador — não "corrija" isso revertendo pra uma versão mais direta):
+1. `GROUP BY` que mistura colunas de mesmo nome (`communities.name` e
+   `affiliates.name`) de tabelas diferentes confunde os valores — contornado
+   agregando num subquery `LEFT JOIN (...)` em vez de `GROUP BY` na query
+   externa.
+2. `WHERE col = ANY($1::int[])` às vezes devolve vazio mesmo com dado
+   batendo — contornado trocando por um `JOIN` direto em vez de passar uma
+   lista de IDs como array de parâmetro.
+
 ## O que é o ScoutX
 
 Plataforma de inteligência competitiva pra lojistas de dropshipping COD
