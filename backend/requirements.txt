@@ -45,7 +45,7 @@ python-dateutil==2.9.0.post0
 python-dotenv==1.2.3
 python-multipart==0.0.32
 PyYAML==6.0.3
-redis==6.4.0
+redis==8.1.0
 six==1.17.0
 soupsieve==2.9.2
 SQLAlchemy==2.0.52
