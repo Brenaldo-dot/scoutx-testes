@@ -116,6 +116,8 @@ export const rawApi = {
   toggleCommunityPostLike: (postId) => request(`/api/community/posts/${postId}/like`, { method: 'POST' }),
 
   listAdminCommunities: () => request('/api/admin/communities'),
+  createCommunityForAffiliate: (affiliateId, name, photoUrl) =>
+    request('/api/admin/communities', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ affiliateId, name, photoUrl }) }),
   listCommunityCommissions: () => request('/api/admin/community-commissions'),
   markCommunityCommissionPaid: (id, paid) =>
     request(`/api/admin/community-commissions/${id}`, {

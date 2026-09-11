@@ -1384,6 +1384,26 @@ function createApp() {
     res.json(await db.listCommunitiesAdminOverview());
   });
 
+  // Admin cria a comunidade EM NOME de um afiliado já cadastrado, sem
+  // precisar logar como aquela pessoa (o fluxo normal em
+  // POST /api/community/setup exige que o email da própria sessão bata com
+  // o afiliado). Útil pra já deixar a comunidade pronta antes do embaixador
+  // nem ter acessado o app ainda.
+  app.post("/api/admin/communities", requireAdmin, async (req, res) => {
+    const affiliateId = Number(req.body?.affiliateId);
+    if (!affiliateId) return res.status(400).json({ error: "Selecione um afiliado." });
+    const name = String(req.body?.name || "").trim();
+    if (!name) return res.status(400).json({ error: "Nome da comunidade é obrigatório." });
+    const existing = await db.getCommunityByAffiliateId(affiliateId);
+    if (existing) return res.status(409).json({ error: "Esse afiliado já tem uma comunidade." });
+    const photoUrl = typeof req.body?.photoUrl === "string" && req.body.photoUrl.startsWith("data:image/") ? req.body.photoUrl : null;
+    if (photoUrl && photoUrl.length > MAX_COMMUNITY_IMAGE_LENGTH) {
+      return res.status(400).json({ error: "Imagem muito grande." });
+    }
+    const community = await db.createCommunity(affiliateId, name, photoUrl);
+    res.status(201).json(community);
+  });
+
   app.get("/api/admin/community-commissions", requireAdmin, async (req, res) => {
     res.json(await db.listCommunityCommissions());
   });

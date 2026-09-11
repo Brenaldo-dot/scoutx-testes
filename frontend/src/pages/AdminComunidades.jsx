@@ -1,13 +1,91 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronUp, Users } from 'lucide-react'
+import { ChevronDown, ChevronUp, Image as ImageIcon, Users } from 'lucide-react'
 import { rawApi } from '../api/rawClient.js'
 import EmptyState from '../components/EmptyState.jsx'
 import RefreshButton from '../components/RefreshButton.jsx'
 import TierBadge from '../components/TierBadge.jsx'
 import { formatDateTime } from '../utils/date.js'
+import { resizeImageToDataUrl } from '../utils/avatar.js'
+
+const inputClass =
+  'rounded-lg border border-[var(--border)] bg-[var(--bg-surface-2)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-faint)] focus:border-brand-500 focus:outline-none'
 
 function money(value) {
   return Number(value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+// Só pra o admin criar a comunidade em nome de um afiliado sem precisar
+// logar como ele (o fluxo normal é o próprio embaixador criar a dele em
+// /comunidade, isso aqui é um atalho pra já deixar pronta).
+function NewCommunityForm({ affiliates, onCreated }) {
+  const [affiliateId, setAffiliateId] = useState('')
+  const [name, setName] = useState('')
+  const [photoUrl, setPhotoUrl] = useState(null)
+  const [creating, setCreating] = useState(false)
+  const [error, setError] = useState(null)
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    try {
+      setPhotoUrl(await resizeImageToDataUrl(file, 400, 0.85))
+    } catch (err) {
+      setError(err.message)
+    }
+  }
+
+  async function submit(e) {
+    e.preventDefault()
+    if (!affiliateId || !name.trim()) return
+    setCreating(true)
+    setError(null)
+    try {
+      await rawApi.createCommunityForAffiliate(Number(affiliateId), name.trim(), photoUrl)
+      setAffiliateId('')
+      setName('')
+      setPhotoUrl(null)
+      onCreated()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5">
+      <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Criar comunidade pra um afiliado</h3>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="flex flex-1 flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--text-muted)]">Afiliado</label>
+          <select required value={affiliateId} onChange={(e) => setAffiliateId(e.target.value)} className={inputClass}>
+            <option value="">Selecione…</option>
+            {affiliates.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name} ({a.cakto_email})
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-1 flex-col gap-1">
+          <label className="text-xs font-medium text-[var(--text-muted)]">Nome da comunidade</label>
+          <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Comunidade Samuel Laviero" className={inputClass} />
+        </div>
+        <label className="flex h-[38px] w-[38px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-dashed border-[var(--border)] bg-[var(--bg-surface-2)] text-[var(--text-faint)] hover:border-brand-500" title="Foto (opcional)">
+          {photoUrl ? <img src={photoUrl} alt="" className="h-full w-full object-cover" /> : <ImageIcon size={15} />}
+          <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        </label>
+        <button
+          type="submit"
+          disabled={creating || !affiliateId || !name.trim()}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+        >
+          {creating ? 'Criando…' : 'Criar comunidade'}
+        </button>
+      </div>
+      {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
+    </form>
+  )
 }
 
 function tierForCount(count) {
@@ -30,13 +108,16 @@ function summarize(communities, commissions) {
 export default function AdminComunidades() {
   const [communities, setCommunities] = useState(null)
   const [commissions, setCommissions] = useState(null)
+  const [affiliates, setAffiliates] = useState([])
   const [error, setError] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
+  const [showNewForm, setShowNewForm] = useState(false)
 
   function load() {
     return Promise.all([
       rawApi.listAdminCommunities().then(setCommunities).catch((e) => setError(e.message)),
       rawApi.listCommunityCommissions().then(setCommissions).catch((e) => setError(e.message)),
+      rawApi.listAffiliates().then(setAffiliates).catch(() => {}),
     ])
   }
 
@@ -59,11 +140,29 @@ export default function AdminComunidades() {
           <p className="text-sm text-[var(--text-muted)]">
             Comissão calculada sozinha a cada renovação de qualquer membro ativo, pela % do nível atual da
             comunidade (Gold até 15 membros 25%, Platinum até 25 membros 30%, Diamond acima disso 35%). O
-            embaixador cria a comunidade dele pela própria conta.
+            embaixador também pode criar a própria comunidade pela aba Comunidade dele.
           </p>
         </div>
-        <RefreshButton onRefresh={load} />
+        <div className="flex items-center gap-2">
+          <RefreshButton onRefresh={load} />
+          <button
+            onClick={() => setShowNewForm((v) => !v)}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            {showNewForm ? 'Cancelar' : '+ Nova comunidade'}
+          </button>
+        </div>
       </div>
+
+      {showNewForm && (
+        <NewCommunityForm
+          affiliates={affiliates}
+          onCreated={() => {
+            setShowNewForm(false)
+            load()
+          }}
+        />
+      )}
 
       {error && <EmptyState title="Não deu pra carregar" subtitle={error} />}
 
