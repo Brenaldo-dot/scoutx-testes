@@ -11,7 +11,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "cheerio": "^1.2.0",
     "express": "^4.19.2",
     "pg": "^8.12.0",
