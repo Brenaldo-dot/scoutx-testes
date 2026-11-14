@@ -851,6 +851,13 @@ function createApp() {
     next();
   }
 
+  // Conector MCP (claude.ai): mesma identidade/headers do proxy /api/minerador/*
+  // abaixo, só que pra um usuário fixo (configurado por env var) em vez de
+  // sessão logada — ver mcp-server.js. PRECISA vir antes do requireAuth: essa
+  // rota não usa cookie de sessão, então cairia sempre em 302 pro /login se
+  // passasse por ele. Sem as env vars, fica desligado.
+  mountMcpServer(app, { db, INTERNAL_API_SECRET, MINERADOR_API_URL: process.env.MINERADOR_API_URL });
+
   app.use(requireAuth);
 
   // ---------- Identidade / permissões pro frontend ----------
@@ -1955,11 +1962,6 @@ function createApp() {
       res.status(502).json({ error: "Não foi possível contatar o serviço do Minerador." });
     }
   });
-
-  // Conector MCP (claude.ai): mesma identidade/headers do proxy acima, só que
-  // pra um usuário fixo (configurado por env var) em vez de sessão logada —
-  // ver mcp-server.js. Sem as env vars, fica desligado.
-  mountMcpServer(app, { db, INTERNAL_API_SECRET, MINERADOR_API_URL });
 
   // Fusão dos apps: o ScoutX (React) virou o app inteiro, servido na raiz —
   // antes vivia em /minerador, com o app antigo "Buscar Barcode Shopify" na
