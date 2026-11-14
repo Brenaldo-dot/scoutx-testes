@@ -10,6 +10,7 @@ const { handleCaktoWebhook } = require("./cakto");
 const caktoApi = require("./caktoApi");
 const db = require("./db");
 const { TIERS, tierForActiveMembers } = require("./communityTiers");
+const { mountMcpServer } = require("./mcp-server");
 
 const APP_BASE_URL = requireEnv("APP_BASE_URL");
 const SESSION_SECRET = requireEnv("SESSION_SECRET");
@@ -1954,6 +1955,11 @@ function createApp() {
       res.status(502).json({ error: "Não foi possível contatar o serviço do Minerador." });
     }
   });
+
+  // Conector MCP (claude.ai): mesma identidade/headers do proxy acima, só que
+  // pra um usuário fixo (configurado por env var) em vez de sessão logada —
+  // ver mcp-server.js. Sem as env vars, fica desligado.
+  mountMcpServer(app, { db, INTERNAL_API_SECRET, MINERADOR_API_URL });
 
   // Fusão dos apps: o ScoutX (React) virou o app inteiro, servido na raiz —
   // antes vivia em /minerador, com o app antigo "Buscar Barcode Shopify" na
